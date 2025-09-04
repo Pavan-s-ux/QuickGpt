@@ -4,7 +4,7 @@ import User from "../models/user.js";
 
 export const stripeWebhooks = async(req ,res)=>{
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
-    const sig = request.headers["stripe-signature"]
+    const sig = req.headers["stripe-signature"]
 
     let event;
 
@@ -43,7 +43,7 @@ export const stripeWebhooks = async(req ,res)=>{
                 console.log("Unhandled event type",event.type);
                 break;
         }
-        res({received:true})
+        res.json({received:true})
     } catch (error) {
         console.log("webhook processing error:",error)
         res.status(500).send("Internal server error")
