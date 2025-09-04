@@ -79,7 +79,7 @@ export const purchasePlans = async(req , res)=>{
             ],
             mode: 'payment',
             });
-            res.json({success:true , url : session.url})
+            res.json({success:true , url:session.url})
 
     }catch(error){
         res.json({success: false,message:error.message})
