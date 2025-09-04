@@ -26,9 +26,16 @@ export const stripeWebhooks = async(req ,res)=>{
                 const {transactionId, appId} = session.metadata;
 
                 if(appId === 'quickgpt'){
-                    const transaction = await Transaction.findOne({
-                        _id:transactionId,isPaid: false
-                    })
+                    const transaction = await Transaction.findById(transactionId);
+
+                    if (!transaction) {
+                    console.log("Transaction not found:", transactionId);
+                    return;
+                    }
+                    if (transaction.isPaid) {
+                    console.log("Transaction already paid:", transactionId);
+                    return;
+                    }
                     await User.updateOne({_id:transaction.userId},{$inc:
                         {credits : transaction.credits}})
 
