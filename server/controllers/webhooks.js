@@ -9,7 +9,7 @@ export const stripeWebhooks = async(req ,res)=>{
     let event;
 
     try {
-        event = stripe.webhooks.constructEvent(request.body,sig,process.env.STRIPE_WEBHOOK_SECRET)
+        event = stripe.webhooks.constructEvent(req.body,sig,process.env.STRIPE_WEBHOOK_SECRET)
 
     } catch (error) {
         return res.status(400).send(`Webhook error:${error.message}`)
@@ -20,7 +20,7 @@ export const stripeWebhooks = async(req ,res)=>{
             case  "payment_intent.succeeded":{
                 const paymentIntent = event.data.object;
                 const sessionList = await stripe.checkout.sessions.list({
-                    payment_intent:paymentIntent._id,
+                    payment_intent:paymentIntent.id,
                 })
                 const session = sessionList.data[0];
                 const {transactionId, appId} = session.metadata;
@@ -35,7 +35,7 @@ export const stripeWebhooks = async(req ,res)=>{
                         transaction.isPaid = true;
                         await transaction.save();
                 }else{
-                    return response.json({received:true,message:"Ignored event:Invalid app"})
+                    return res.json({received:true,message:"Ignored event:Invalid app"})
                 }
                 break;
             }
@@ -43,9 +43,9 @@ export const stripeWebhooks = async(req ,res)=>{
                 console.log("Unhandled event type",event.type);
                 break;
         }
-        response({received:true})
+        res({received:true})
     } catch (error) {
         console.log("webhook processing error:",error)
-        response.status(500).send("Internal server error")
+        res.status(500).send("Internal server error")
     }
 }
