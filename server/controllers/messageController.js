@@ -6,43 +6,51 @@ import openai from "../Config/openai.js"
 // Text-based AI chat message controller
 
 export const textMessageController = async (req, res) => {
-    try {
-        const userId = req.user._id;
-        const { chatId, prompt } = req.body;
+  try {
+    const userId = req.user._id;
+    const { chatId, prompt } = req.body;
 
-        if(req.user.credits < 1){
-            return res.json({success:false , message:"You dont have enough credits to use this feature"})
-        }
-
-        const chat = await Chat.findOne({ userId, _id: chatId })
-        chat.messages.push({
-            role: "User", content: prompt, timeStamp: Date.now(),
-            isImage: false
-        })
-
-        const {choices} = await openai.chat.completions.create({
-            model: "gemini-2.0-flash",
-            messages: [
-                {
-                    role: "user",
-                    content: prompt,
-                },
-            ],
-        });
-        const reply = {...choices[0].message, timeStamp: Date.now(),
-            isImage: false}
-        
-        res.json({success:true,reply})
-
-        chat.messages.push(reply)
-        await chat.save();
-        await User.updateOne({_id: userId}, {$inc :{credits : -1}});
-        
-
-    } catch (error) {
-        res.json({success:false,message:error.message});
+    if (req.user.credits < 1) {
+      return res.json({
+        success: false,
+        message: "You dont have enough credits to use this feature",
+      });
     }
-}
+
+    const chat = await Chat.findOne({ userId, _id: chatId });
+
+    // push user message
+    chat.messages.push({
+      role: "user",
+      content: prompt,
+      timestamp: Date.now(),
+      isImage: false,
+    });
+
+    // ask AI
+    const { choices } = await openai.chat.completions.create({
+      model: "gemini-2.0-flash",
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const reply = {
+      ...choices[0].message,
+      role: "assistant",
+      timestamp: Date.now(),
+      isImage: false,
+    };
+
+    // update chat + user credits
+    chat.messages.push(reply);
+    await chat.save();
+    await User.updateOne({ _id: userId }, { $inc: { credits: -1 } });
+
+
+    return res.json({ success: true, reply,chat });
+  } catch (error) {
+    return res.json({ success: false, message: error.message });
+  }
+};
 
 
 // API for image generation
@@ -60,7 +68,7 @@ export const imageMessageController = async (req,res)=>{
 
         // push user message
         chat.messages.push({
-            role: "User", content: prompt, timeStamp: Date.now(),
+            role: "user", content: prompt, timestamp: Date.now(),
             isImage: false
         });
 
@@ -83,14 +91,15 @@ export const imageMessageController = async (req,res)=>{
         folder :"quickgpt"
        })
 
-       const reply = {role:"assisstant",content:uploadResponse.url, timeStamp: Date.now(),
+       const reply = {role:"assistant",content:uploadResponse.url, timestamp: Date.now(),
             isImage: true
         ,isPublished};
-        res.json({success:true,reply})
+        
         chat.messages.push(reply);
         await chat.save();
 
         await User.updateOne({_id: userId}, {$inc :{credits : -2}});
+        res.json({success:true,reply,chat})
 
     } catch (error) {
         res.json({success:false,message:error.message});
